@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Skill Gomoku</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- Lobby Overlay -->
+    <div id="lobby-overlay">
+        <div class="lobby-container">
+            <div class="lobby-box">
+                <h1 class="lobby-title" data-i18n="gameTitle">Skill Gomoku</h1>
+                <div class="lobby-input-group">
+                    <input type="text" id="room-id-input" placeholder="Enter Room ID" maxlength="10" data-i18n-placeholder="enterRoomId">
+                    <button id="join-room-btn" class="lobby-btn" data-i18n="joinGame">Join Game</button>
+                </div>
+                <div id="lobby-status" data-i18n="waitingInput">Waiting for input...</div>
+                
+                <div class="lang-switch-container" style="margin-top: 20px;">
+                    <button id="lang-btn-lobby" class="lobby-btn" style="padding: 5px 15px; font-size: 14px;">中文 / EN</button>
+                </div>
+            </div>
+            <div class="room-list-panel">
+                <h3 data-i18n="roomList">Room List</h3>
+                <ul id="room-list">
+                    <!-- Rooms will be populated here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-container" class="lol-ui">
+        <!-- Top Bar -->
+        <div id="top-bar">
+            <div class="team-info blue-team">
+                <span class="team-name" data-i18n="teamOrder">Order (Black)</span>
+            </div>
+            <div id="score-board">
+                <span id="game-status">VS</span>
+            </div>
+            <div class="team-info red-team">
+                <span class="team-name" data-i18n="teamChaos">Chaos (White)</span>
+            </div>
+        </div>
+
+        <!-- Center Message Area -->
+        <div id="message-area"></div>
+
+        <!-- Bottom HUD -->
+        <div id="bottom-hud">
+            <!-- Player Info (Left) -->
+            <div class="hud-section player-stats">
+                <div class="portrait-frame">
+                    <div id="current-player-portrait" class="portrait-img"></div>
+                </div>
+                <div class="stats-text">
+                    <div id="current-player" class="player-name" data-i18n="playerBlack">Black</div>
+                </div>
+            </div>
+
+            <!-- Skills (Center) -->
+            <div class="hud-section skills-panel">
+                <div class="skill-slot" id="slot-q">
+                    <button id="skill-q-btn" class="skill-button">
+                        <div class="skill-icon"></div>
+                        <div class="cooldown-overlay"></div>
+                        <div class="key-bind">Q</div>
+                    </button>
+                    <div class="tooltip">
+                        <div class="tt-title"></div>
+                        <div class="tt-desc"></div>
+                    </div>
+                </div>
+
+                <div class="skill-slot" id="slot-w">
+                    <button id="skill-w-btn" class="skill-button">
+                        <div class="skill-icon"></div>
+                        <div class="cooldown-overlay"></div>
+                        <div class="key-bind">W</div>
+                    </button>
+                    <div class="tooltip">
+                        <div class="tt-title"></div>
+                        <div class="tt-desc"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System (Right) -->
+            <div class="hud-section system-panel">
+                <div class="inventory-slot">
+                    <button id="lang-btn-game" class="item-button">
+                        <div class="item-icon">🌐</div>
+                    </button>
+                </div>
+                <div class="inventory-slot">
+                    <button id="music-btn" class="item-button">
+                        <div class="item-icon">🎵</div>
+                    </button>
+                </div>
+                <div class="inventory-slot">
+                    <button id="restart-btn" class="item-button">
+                        <div class="item-icon">🔄</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="canvas-container"></div>
+
+    <audio id="bgm" loop>
+        <source src="技能五子棋.mp3" type="audio/mpeg">
+    </audio>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

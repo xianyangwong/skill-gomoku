@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  skill-gomoku:
+    image: xianyangwong/skill-gomoku:latest
+    # build: .  # 如果想在本地构建，请取消注释此行
+    container_name: skill-gomoku-container
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    restart: always

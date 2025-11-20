@@ -99,18 +99,50 @@
                     <button id="lang-btn-game" class="item-button">
                         <div class="item-icon">🌐</div>
                     </button>
+                    <div class="tooltip system-tooltip">
+                        <div class="tt-title" data-i18n="tooltipLang">Language</div>
+                    </div>
+                </div>
+                <div class="inventory-slot">
+                    <button id="rules-btn" class="item-button">
+                        <div class="item-icon">📜</div>
+                    </button>
+                    <div class="tooltip system-tooltip">
+                        <div class="tt-title" data-i18n="tooltipRules">Rules</div>
+                    </div>
                 </div>
                 <div class="inventory-slot">
                     <button id="music-btn" class="item-button">
                         <div class="item-icon">🎵</div>
                     </button>
+                    <div class="tooltip system-tooltip">
+                        <div class="tt-title" data-i18n="tooltipMusic">Music</div>
+                    </div>
                 </div>
                 <div class="inventory-slot">
                     <button id="restart-btn" class="item-button">
                         <div class="item-icon">🔄</div>
                     </button>
+                    <div class="tooltip system-tooltip">
+                        <div class="tt-title" data-i18n="tooltipRestart">Restart</div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2 class="modal-title" data-i18n="rulesTitle">Game Rules</h2>
+            <div class="rules-body">
+                <p data-i18n="rulesContent">
+                    1. Connect 5 stones in a row to win.<br>
+                    2. Use skills strategically.<br>
+                    3. Black goes first.
+                </p>
+            </div>
+            <button id="close-rules-btn" class="lobby-btn" data-i18n="closeRules">Got it!</button>
         </div>
     </div>
 

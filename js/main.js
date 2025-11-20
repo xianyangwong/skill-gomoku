@@ -37,6 +37,7 @@ const btnSkillQ = document.getElementById('skill-q-btn');
 const btnSkillW = document.getElementById('skill-w-btn');
 const btnRestart = document.getElementById('restart-btn');
 const btnMusic = document.getElementById('music-btn');
+const btnRules = document.getElementById('rules-btn');
 const bgm = document.getElementById('bgm');
 
 // Chat Elements
@@ -52,6 +53,10 @@ const roomIdInput = document.getElementById('room-id-input');
 const joinRoomBtn = document.getElementById('join-room-btn');
 const lobbyStatus = document.getElementById('lobby-status');
 const roomListElement = document.getElementById('room-list');
+
+// Rules Elements
+const rulesModal = document.getElementById('rules-modal');
+const closeRulesBtn = document.getElementById('close-rules-btn');
 
 // Audio Context
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -105,7 +110,23 @@ const TRANSLATIONS = {
         msgSelectSecond: "Select second position",
         msgSelectFirst: "Select first position",
         
-        draftTitle: "Skill Draft"
+        draftTitle: "Skill Draft",
+        
+        // Rules
+        rulesTitle: "Game Rules",
+        rulesContent: `
+            1. <strong>Objective</strong>: Connect 5 stones in a row (horizontal, vertical, or diagonal) to win.<br>
+            2. <strong>Skills</strong>: Each player gets 2 random skills at the start.<br>
+            3. <strong>Cooldowns</strong>: Skills have cooldowns. Use them wisely!<br>
+            4. <strong>Turn</strong>: Black goes first.
+        `,
+        closeRules: "Got it!",
+        
+        // Tooltips
+        tooltipLang: "Language",
+        tooltipRules: "Rules",
+        tooltipMusic: "Music",
+        tooltipRestart: "Restart"
     },
     'zh': {
         gameTitle: "技能五子棋",
@@ -153,7 +174,23 @@ const TRANSLATIONS = {
         msgSelectSecond: "请选择第二个位置",
         msgSelectFirst: "请选择第一个位置",
         
-        draftTitle: "技能抽取"
+        draftTitle: "技能抽取",
+        
+        // Rules
+        rulesTitle: "游戏规则",
+        rulesContent: `
+            1. <strong>目标</strong>: 横、竖、斜任意方向连成五子即可获胜。<br>
+            2. <strong>技能</strong>: 每位玩家开局随机获得 2 个技能。<br>
+            3. <strong>冷却</strong>: 技能有冷却时间，请策略性使用！<br>
+            4. <strong>回合</strong>: 黑方先行。
+        `,
+        closeRules: "明白了！",
+
+        // Tooltips
+        tooltipLang: "切换语言",
+        tooltipRules: "游戏规则",
+        tooltipMusic: "背景音乐",
+        tooltipRestart: "重新开始"
     }
 };
 
@@ -320,6 +357,10 @@ function init() {
     btnSkillW.addEventListener('click', () => toggleSkillMode(1));
     btnRestart.addEventListener('click', requestRestart);
     btnMusic.addEventListener('click', toggleMusic);
+    
+    // Rules Listeners
+    if (btnRules) btnRules.addEventListener('click', showRules);
+    if (closeRulesBtn) closeRulesBtn.addEventListener('click', hideRules);
 
     // Chat Listeners
     toggleChatBtn.addEventListener('click', () => {
@@ -348,6 +389,25 @@ function init() {
     // 9. Start Loop
     animate();
     updateUI();
+
+    // 10. Check Rules (First Time)
+    checkFirstTimeRules();
+}
+
+function checkFirstTimeRules() {
+    const hasSeenRules = localStorage.getItem('skillGomoku_hasSeenRules');
+    if (!hasSeenRules) {
+        showRules();
+    }
+}
+
+function showRules() {
+    if (rulesModal) rulesModal.style.display = 'flex';
+}
+
+function hideRules() {
+    if (rulesModal) rulesModal.style.display = 'none';
+    localStorage.setItem('skillGomoku_hasSeenRules', 'true');
 }
 
 function showSkillDraftAnimation(skills) {
@@ -833,7 +893,9 @@ function onTouchStart(event) {
 }
 
 function onMouseClick(event) {
-    if (event.target.closest('#ui-container') || event.target.closest('#lobby-overlay')) return;
+    if (event.target.closest('#ui-container') || 
+        event.target.closest('#lobby-overlay') || 
+        event.target.closest('#rules-modal')) return;
     
     // Prevent click if dragged (camera rotation)
     // For touch, we might need a larger threshold

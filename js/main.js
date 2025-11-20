@@ -18,6 +18,12 @@ let game;
 let currentSkillMode = null; // 'sand' or 'mist' or 'skip' or 'swap'
 let swapSource = null; // {x, y} for first click of swap skill
 
+// Animation Variables
+let cameraTargetPos = new THREE.Vector3();
+let isIntroAnimating = true;
+let shakeIntensity = 0;
+const SHAKE_DECAY = 0.9;
+
 // Multiplayer Variables
 let socket;
 let myRole = null; // PLAYER_BLACK or PLAYER_WHITE
@@ -162,6 +168,10 @@ function t(key, params = {}) {
 function changeLanguage(lang) {
     currentLang = lang;
     
+    // Set body class for CSS styling
+    document.body.classList.remove('lang-en', 'lang-zh');
+    document.body.classList.add(`lang-${lang}`);
+
     // Update static elements
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
@@ -238,6 +248,9 @@ function init() {
         lobbyStatus.style.color = "#ff4444";
     }
 
+    // Initialize Language
+    changeLanguage(currentLang);
+
     // 1. Scene Setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x333333);
@@ -246,13 +259,16 @@ function init() {
     // 2. Camera
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     
-    // Adjust camera for mobile
+    // Set initial position far away for intro animation
+    camera.position.set(0, 200, 100);
+    
+    // Set target position based on device
     if (window.innerWidth < 768) {
-        camera.position.set(0, 55, 40); // Higher and further back for mobile
+        cameraTargetPos.set(0, 60, 30);
     } else {
-        camera.position.set(0, 40, 30);
+        cameraTargetPos.set(0, 50, 25);
     }
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(0, 0, 3);
 
     // 3. Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -265,6 +281,8 @@ function init() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2 - 0.1;
+    controls.target.set(0, 0, 3); // Match lookAt target
+    controls.update();
 
     // 5. Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -458,6 +476,10 @@ function setupSocketListeners() {
         if (data.type === 'move') {
             createPiece(data.x, data.y, data.player);
             playMoveSound();
+            // Shake camera on opponent's move
+            if (data.player !== myRole) {
+                triggerShake(0.8);
+            }
         } else if (data.type === 'skill') {
             if (data.skillType === 'sand') {
                 playSkillSound('sand');
@@ -616,13 +638,19 @@ function joinRoom() {
 
 // --- Object Creation ---
 function createBoard() {
-    const geometry = new THREE.BoxGeometry(BOARD_WIDTH + 2, 1, BOARD_WIDTH + 2);
-    const material = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.6 });
+    // 1. Board Base (Thicker, warm wood color)
+    const geometry = new THREE.BoxGeometry(BOARD_WIDTH + 1.5, 1.5, BOARD_WIDTH + 1.5);
+    const material = new THREE.MeshStandardMaterial({ 
+        color: 0xE6C288, // Kaya wood color
+        roughness: 0.3,
+        metalness: 0.05
+    });
     boardMesh = new THREE.Mesh(geometry, material);
-    boardMesh.position.y = -0.5;
+    boardMesh.position.y = -0.75; // Top at y=0
     boardMesh.receiveShadow = true;
     scene.add(boardMesh);
 
+    // 2. Grid Lines
     const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.5, transparent: true });
     const points = [];
     const halfSize = BOARD_WIDTH / 2;
@@ -630,32 +658,72 @@ function createBoard() {
 
     for (let i = 0; i < BOARD_SIZE; i++) {
         const pos = start + i * CELL_SIZE;
-        points.push(new THREE.Vector3(pos, 0.01, -halfSize));
-        points.push(new THREE.Vector3(pos, 0.01, halfSize));
-        points.push(new THREE.Vector3(-halfSize, 0.01, pos));
-        points.push(new THREE.Vector3(halfSize, 0.01, pos));
+        // Draw lines slightly shorter than full board width to leave margin
+        const limit = halfSize - 0.5; 
+        points.push(new THREE.Vector3(pos, 0.01, -limit));
+        points.push(new THREE.Vector3(pos, 0.01, limit));
+        points.push(new THREE.Vector3(-limit, 0.01, pos));
+        points.push(new THREE.Vector3(limit, 0.01, pos));
     }
     const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
     const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
     scene.add(lines);
+
+    // 3. Star Points (Hoshi) for 15x15
+    // Standard points are at 3, 7, 11 (0-indexed)
+    const starIndices = [3, 7, 11];
+    const dotGeometry = new THREE.CircleGeometry(0.15, 32);
+    const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.8, transparent: true });
+
+    starIndices.forEach(x => {
+        starIndices.forEach(y => {
+            const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+            dot.rotation.x = -Math.PI / 2;
+            const worldPos = gridToWorld(x, y);
+            dot.position.set(worldPos.x, 0.02, worldPos.z);
+            scene.add(dot);
+        });
+    });
 }
 
 function createPreviewPiece() {
-    const geometry = new THREE.CylinderGeometry(PIECE_RADIUS, PIECE_RADIUS, PIECE_HEIGHT, 32);
-    const material = new THREE.MeshStandardMaterial({ color: 0x000000, transparent: true, opacity: 0.5 });
+    // Go stone shape: flattened sphere (oblate spheroid)
+    const geometry = new THREE.SphereGeometry(PIECE_RADIUS, 32, 16);
+    geometry.scale(1, 0.4, 1); // Flatten Y axis
+    
+    const material = new THREE.MeshStandardMaterial({ 
+        color: 0x000000, 
+        transparent: true, 
+        opacity: 0.5,
+        roughness: 0.2,
+        metalness: 0.1
+    });
     previewMesh = new THREE.Mesh(geometry, material);
     previewMesh.visible = false;
     scene.add(previewMesh);
 }
 
 function createPiece(x, y, player) {
-    const color = player === PLAYER_BLACK ? 0x111111 : 0xffffff;
-    const geometry = new THREE.CylinderGeometry(PIECE_RADIUS, PIECE_RADIUS, PIECE_HEIGHT, 32);
-    const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3, metalness: 0.2 });
+    const isBlack = player === PLAYER_BLACK;
+    const color = isBlack ? 0x111111 : 0xffffff;
+    
+    // Go stone shape
+    const geometry = new THREE.SphereGeometry(PIECE_RADIUS, 32, 16);
+    geometry.scale(1, 0.4, 1); // Flatten Y axis
+
+    const material = new THREE.MeshStandardMaterial({ 
+        color: color, 
+        roughness: isBlack ? 0.2 : 0.1, // White stones are often smoother/glossier
+        metalness: 0.1,
+        envMapIntensity: 1.0
+    });
+    
     const piece = new THREE.Mesh(geometry, material);
     
     const worldPos = gridToWorld(x, y);
-    piece.position.set(worldPos.x, PIECE_HEIGHT / 2, worldPos.z);
+    // Adjust height because sphere origin is center
+    piece.position.set(worldPos.x, PIECE_RADIUS * 0.4, worldPos.z); 
+    
     piece.castShadow = true;
     piece.receiveShadow = true;
     piece.userData = { gridX: x, gridY: y };
@@ -1088,6 +1156,7 @@ function checkGameState() {
 }
 
 function updateUI() {
+    if (!game) return;
     const isBlackTurn = game.currentPlayer === PLAYER_BLACK;
     
     // Update Top Bar Status (Current Turn)
@@ -1175,20 +1244,67 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Adjust camera position on resize if crossing breakpoint
+    // Update target position
     if (window.innerWidth < 768) {
-        // Only adjust if we are significantly off (simple check)
-        if (camera.position.y < 50) {
-             camera.position.set(0, 55, 40);
-             camera.lookAt(0, 0, 0);
+        cameraTargetPos.set(0, 60, 30);
+    } else {
+        cameraTargetPos.set(0, 50, 25);
+    }
+
+    // Adjust camera position on resize if crossing breakpoint and not animating
+    if (!isIntroAnimating) {
+        if (window.innerWidth < 768) {
+            // Switch to Mobile view if currently in Desktop view range
+            if (camera.position.y < 55) {
+                 camera.position.copy(cameraTargetPos);
+                 camera.lookAt(0, 0, 3);
+                 controls.target.set(0, 0, 3);
+            }
+        } else {
+            // Switch to Desktop view if currently in Mobile view range
+            if (camera.position.y > 55) {
+                 camera.position.copy(cameraTargetPos);
+                 camera.lookAt(0, 0, 3);
+                 controls.target.set(0, 0, 3);
+            }
         }
     }
 }
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // Intro Animation
+    if (isIntroAnimating) {
+        camera.position.lerp(cameraTargetPos, 0.03);
+        if (camera.position.distanceTo(cameraTargetPos) < 0.5) {
+            isIntroAnimating = false;
+            controls.target.set(0, 0, 3);
+        }
+    }
+
     controls.update();
-    renderer.render(scene, camera);
+
+    // Camera Shake
+    if (shakeIntensity > 0) {
+        const rx = (Math.random() - 0.5) * shakeIntensity;
+        const ry = (Math.random() - 0.5) * shakeIntensity;
+        const rz = (Math.random() - 0.5) * shakeIntensity;
+        
+        const shakeOffset = new THREE.Vector3(rx, ry, rz);
+        camera.position.add(shakeOffset);
+        renderer.render(scene, camera);
+        camera.position.sub(shakeOffset);
+
+        shakeIntensity *= SHAKE_DECAY;
+        if (shakeIntensity < 0.05) shakeIntensity = 0;
+    } else {
+        renderer.render(scene, camera);
+    }
+}
+
+function triggerShake(intensity = 1.0) {
+    shakeIntensity = intensity;
 }
 
 // Start

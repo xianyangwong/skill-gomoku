@@ -22,9 +22,9 @@ body {
 /* --- Top Bar --- */
 #top-bar {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    padding: 15px 50px;
+    padding: 15px 0;
     background: linear-gradient(to bottom, rgba(9, 20, 40, 0.95), rgba(9, 20, 40, 0));
     pointer-events: auto;
     border-bottom: 1px solid rgba(200, 170, 110, 0.3);
@@ -32,7 +32,7 @@ body {
 
 .team-info {
     font-family: 'Cinzel', "Microsoft YaHei", serif; /* LoL-like header font */
-    font-size: 28px;
+    font-size: clamp(16px, 2.5vw, 28px);
     font-weight: 700;
     text-shadow: 0 0 10px rgba(0,0,0,0.8);
     letter-spacing: 1px;
@@ -43,7 +43,7 @@ body {
 
 #score-board {
     font-family: 'Cinzel', serif;
-    font-size: 48px;
+    font-size: clamp(24px, 4vw, 48px);
     color: #f0e6d2;
     font-weight: bold;
     text-shadow: 0 0 10px #c8aa6e;
@@ -62,7 +62,7 @@ body {
 #message-area {
     text-align: center;
     font-family: 'Cinzel', "Microsoft YaHei", serif;
-    font-size: 56px;
+    font-size: clamp(32px, 5vw, 56px);
     font-weight: bold;
     color: #ff4444;
     text-shadow: 0 0 10px #000, 0 0 20px #ff0000;
@@ -172,7 +172,7 @@ body {
 }
 
 .player-name {
-    font-size: 20px;
+    font-size: clamp(14px, 1.5vw, 20px);
     color: #f0e6d2;
     font-weight: bold;
     font-family: 'Cinzel', "Microsoft YaHei", serif;
@@ -470,7 +470,7 @@ body {
 .lobby-title {
     font-family: 'Cinzel', "Microsoft YaHei", serif;
     color: #c8aa6e;
-    font-size: 36px;
+    font-size: clamp(24px, 3vw, 36px);
     margin-bottom: 30px;
     text-shadow: 0 0 10px #c8aa6e;
 }
@@ -545,7 +545,7 @@ body {
 
 .draft-title {
     font-family: 'Cinzel', "Microsoft YaHei", serif;
-    font-size: 48px;
+    font-size: clamp(32px, 4vw, 48px);
     color: #c8aa6e;
     text-shadow: 0 0 20px #c8aa6e;
     margin-bottom: 40px;
@@ -600,7 +600,7 @@ body {
 
 .draft-card-name {
     font-family: 'Cinzel', "Microsoft YaHei", serif;
-    font-size: 24px;
+    font-size: clamp(16px, 2vw, 24px);
     color: #f0e6d2;
     font-weight: bold;
     text-shadow: 0 0 5px #000;
@@ -618,18 +618,14 @@ body {
         padding: 10px 15px;
     }
     
-    .team-info {
-        font-size: 16px;
-    }
+    /* Font sizes handled by clamp() */
     
     #score-board {
-        font-size: 24px;
         padding: 0 10px;
     }
 
     /* Message Area */
     #message-area {
-        font-size: 32px;
         margin-top: 80px;
     }
 
@@ -653,10 +649,6 @@ body {
         height: 50px;
         margin-right: 8px;
         border-width: 2px;
-    }
-
-    .player-name {
-        font-size: 14px;
     }
 
     /* Skills */
@@ -716,10 +708,6 @@ body {
         max-height: 200px;
     }
 
-    .lobby-title {
-        font-size: 28px;
-    }
-
     /* Draft Overlay */
     .draft-cards {
         gap: 15px;
@@ -732,10 +720,6 @@ body {
 
     .draft-card-icon {
         font-size: 48px;
-    }
-
-    .draft-card-name {
-        font-size: 18px;
     }
 }
 
@@ -864,3 +848,12 @@ body {
         grid-template-columns: repeat(4, 1fr);
     }
 }
+/* --- English Font Adjustments --- */
+body.lang-en .lobby-title { font-size: clamp(22px, 2.8vw, 32px); }
+body.lang-en .team-info { font-size: clamp(14px, 2.2vw, 24px); }
+body.lang-en #score-board { font-size: clamp(22px, 3.5vw, 42px); }
+body.lang-en #message-area { font-size: clamp(28px, 4.5vw, 48px); }
+body.lang-en .player-name { font-size: clamp(13px, 1.4vw, 18px); }
+body.lang-en .lobby-btn { font-size: clamp(16px, 1.8vw, 18px); }
+body.lang-en .draft-title { font-size: clamp(28px, 3.5vw, 42px); }
+body.lang-en .draft-card-name { font-size: clamp(14px, 1.8vw, 20px); }

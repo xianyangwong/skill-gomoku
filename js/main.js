@@ -33,6 +33,13 @@ const btnRestart = document.getElementById('restart-btn');
 const btnMusic = document.getElementById('music-btn');
 const bgm = document.getElementById('bgm');
 
+// Chat Elements
+const chatContainer = document.getElementById('chat-container');
+const chatMessages = document.getElementById('chat-messages');
+const emotePanel = document.getElementById('emote-panel');
+const toggleChatBtn = document.getElementById('toggle-chat-btn');
+const emoteBtns = document.querySelectorAll('.emote-btn');
+
 // Lobby Elements
 const lobbyOverlay = document.getElementById('lobby-overlay');
 const roomIdInput = document.getElementById('room-id-input');
@@ -238,7 +245,13 @@ function init() {
 
     // 2. Camera
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 40, 30);
+    
+    // Adjust camera for mobile
+    if (window.innerWidth < 768) {
+        camera.position.set(0, 55, 40); // Higher and further back for mobile
+    } else {
+        camera.position.set(0, 40, 30);
+    }
     camera.lookAt(0, 0, 0);
 
     // 3. Renderer
@@ -282,10 +295,26 @@ function init() {
     window.addEventListener('click', onMouseClick);
     window.addEventListener('keydown', onKeyDown);
     
+    // Mobile Touch Support
+    window.addEventListener('touchstart', onTouchStart, { passive: false });
+    
     btnSkillQ.addEventListener('click', () => toggleSkillMode(0));
     btnSkillW.addEventListener('click', () => toggleSkillMode(1));
     btnRestart.addEventListener('click', requestRestart);
     btnMusic.addEventListener('click', toggleMusic);
+
+    // Chat Listeners
+    toggleChatBtn.addEventListener('click', () => {
+        emotePanel.classList.toggle('visible');
+    });
+
+    emoteBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const emote = btn.getAttribute('data-emote');
+            sendEmote(emote);
+            emotePanel.classList.remove('visible');
+        });
+    });
 
     // Lobby Listeners
     joinRoomBtn.addEventListener('click', joinRoom);
@@ -541,6 +570,33 @@ function setupSocketListeners() {
         uiMessage.textContent = t('opponentLeft');
         game.gameOver = true; // Pause game effectively
     });
+
+    socket.on('chat_message', (data) => {
+        addChatMessage(data.message, data.sender === socket.id);
+    });
+}
+
+function sendEmote(emote) {
+    if (roomId && socket) {
+        socket.emit('send_chat', { roomId, message: emote });
+        // Optimistic update? No, wait for server echo to ensure order/delivery
+    }
+}
+
+function addChatMessage(msg, isSelf) {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${isSelf ? 'self' : 'opponent'}`;
+    bubble.textContent = msg;
+    chatMessages.appendChild(bubble);
+    
+    // Auto scroll
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        bubble.style.opacity = '0';
+        setTimeout(() => bubble.remove(), 500);
+    }, 5000);
 }
 
 function joinRoom() {
@@ -689,15 +745,44 @@ function onMouseDown(event) {
     mouseDownPosition.set(event.clientX, event.clientY);
 }
 
+function onTouchStart(event) {
+    if (event.touches.length === 1) {
+        mouseDownPosition.set(event.touches[0].clientX, event.touches[0].clientY);
+        
+        // Update mouse position for raycaster immediately to show preview if needed
+        mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+        
+        // Trigger a "move" update to show preview
+        // We can reuse onMouseMove logic but we need to mock the event or extract the logic
+        // Let's just extract the logic or call it with a mocked object
+        // But onMouseMove expects a MouseEvent.
+        // Let's refactor onMouseMove slightly or just manually update raycaster here.
+        
+        // Actually, on mobile, we might not want the preview to jump around during drag.
+        // Let's leave it for now. The click event will handle the action.
+    }
+}
+
 function onMouseClick(event) {
     if (event.target.closest('#ui-container') || event.target.closest('#lobby-overlay')) return;
     
     // Prevent click if dragged (camera rotation)
-    const currentPos = new THREE.Vector2(event.clientX, event.clientY);
-    if (mouseDownPosition.distanceTo(currentPos) > 5) return;
+    // For touch, we might need a larger threshold
+    const clientX = event.clientX || (event.changedTouches && event.changedTouches[0] ? event.changedTouches[0].clientX : 0);
+    const clientY = event.clientY || (event.changedTouches && event.changedTouches[0] ? event.changedTouches[0].clientY : 0);
+    
+    const currentPos = new THREE.Vector2(clientX, clientY);
+    const threshold = (event.type === 'touchend') ? 20 : 5; // Larger threshold for touch
+    
+    if (mouseDownPosition.distanceTo(currentPos) > threshold) return;
 
     if (game.gameOver) return;
     if (game.currentPlayer !== myRole) return; // Not my turn
+
+    // Update mouse for raycaster
+    mouse.x = (clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(clientY / window.innerHeight) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObject(boardMesh);
@@ -1089,6 +1174,15 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Adjust camera position on resize if crossing breakpoint
+    if (window.innerWidth < 768) {
+        // Only adjust if we are significantly off (simple check)
+        if (camera.position.y < 50) {
+             camera.position.set(0, 55, 40);
+             camera.lookAt(0, 0, 0);
+        }
+    }
 }
 
 function animate() {

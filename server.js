@@ -178,6 +178,15 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('send_chat', (data) => {
+        const { roomId, message } = data;
+        // Broadcast to room
+        io.to(roomId).emit('chat_message', {
+            sender: socket.id,
+            message: message
+        });
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
         // Find room and remove player

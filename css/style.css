@@ -610,3 +610,257 @@ body {
     border-color: #0acbe6;
     box-shadow: 0 0 30px rgba(10, 203, 230, 0.3);
 }
+
+/* --- Mobile Adaptation --- */
+@media (max-width: 768px) {
+    /* Top Bar */
+    #top-bar {
+        padding: 10px 15px;
+    }
+    
+    .team-info {
+        font-size: 16px;
+    }
+    
+    #score-board {
+        font-size: 24px;
+        padding: 0 10px;
+    }
+
+    /* Message Area */
+    #message-area {
+        font-size: 32px;
+        margin-top: 80px;
+    }
+
+    /* Bottom HUD */
+    #bottom-hud {
+        height: 100px;
+        padding-bottom: 10px;
+    }
+
+    .hud-section {
+        margin: 0 5px;
+    }
+
+    /* Player Stats */
+    .player-stats {
+        padding-right: 10px;
+    }
+
+    .portrait-frame {
+        width: 50px;
+        height: 50px;
+        margin-right: 8px;
+        border-width: 2px;
+    }
+
+    .player-name {
+        font-size: 14px;
+    }
+
+    /* Skills */
+    .skills-panel {
+        gap: 8px;
+    }
+
+    .skill-slot {
+        width: 50px;
+        height: 50px;
+    }
+
+    .skill-icon {
+        font-size: 24px;
+    }
+
+    .key-bind {
+        display: none; /* Hide keyboard shortcuts on mobile */
+    }
+
+    .cooldown-overlay {
+        font-size: 20px;
+    }
+
+    /* System Panel */
+    .system-panel {
+        padding-left: 10px;
+        flex-direction: column;
+        gap: 5px;
+        border-left: none;
+    }
+
+    .inventory-slot {
+        width: 30px;
+        height: 30px;
+    }
+
+    .item-icon {
+        font-size: 16px;
+    }
+
+    /* Lobby */
+    .lobby-container {
+        flex-direction: column;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .lobby-box {
+        width: auto;
+        padding: 20px;
+    }
+
+    .room-list-panel {
+        width: auto;
+        max-height: 200px;
+    }
+
+    .lobby-title {
+        font-size: 28px;
+    }
+
+    /* Draft Overlay */
+    .draft-cards {
+        gap: 15px;
+    }
+
+    .draft-card {
+        width: 110px;
+        height: 160px;
+    }
+
+    .draft-card-icon {
+        font-size: 48px;
+    }
+
+    .draft-card-name {
+        font-size: 18px;
+    }
+}
+
+/* --- Chat/Emote System --- */
+#chat-container {
+    position: absolute;
+    bottom: 160px; /* Above HUD */
+    right: 20px;
+    width: 300px;
+    pointer-events: none; /* Let clicks pass through empty areas */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    z-index: 50;
+}
+
+#chat-messages {
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+    pointer-events: none;
+}
+
+.chat-bubble {
+    background: rgba(9, 20, 40, 0.8);
+    border: 1px solid #c8aa6e;
+    color: #f0e6d2;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    max-width: 80%;
+    align-self: flex-start; /* Default left (opponent) */
+    animation: fadeIn 0.3s ease-out;
+    pointer-events: auto;
+}
+
+.chat-bubble.self {
+    align-self: flex-end;
+    background: rgba(10, 203, 230, 0.2);
+    border-color: #0acbe6;
+}
+
+.chat-bubble.opponent {
+    align-self: flex-start;
+    background: rgba(232, 64, 87, 0.2);
+    border-color: #e84057;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#emote-panel {
+    background: rgba(9, 20, 40, 0.95);
+    border: 2px solid #785a28;
+    padding: 10px;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    pointer-events: auto;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease-out;
+    pointer-events: none; /* Hidden by default */
+}
+
+#emote-panel.visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.emote-btn {
+    background: #1e2328;
+    border: 1px solid #444;
+    color: #fff;
+    font-size: 20px;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.1s;
+}
+
+.emote-btn:hover {
+    background: #2a3038;
+    border-color: #c8aa6e;
+    transform: scale(1.1);
+}
+
+#toggle-chat-btn {
+    background: #1e2328;
+    border: 2px solid #c8aa6e;
+    color: #f0e6d2;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    pointer-events: auto;
+    margin-top: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    transition: all 0.2s;
+}
+
+#toggle-chat-btn:hover {
+    background: #2a3038;
+    box-shadow: 0 0 15px #c8aa6e;
+}
+
+/* Mobile adjustments for chat */
+@media (max-width: 768px) {
+    #chat-container {
+        bottom: 120px;
+        right: 10px;
+        width: 200px;
+    }
+    
+    #emote-panel {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}

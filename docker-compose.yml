@@ -2,11 +2,21 @@ version: '3.8'
 
 services:
   skill-gomoku:
-    image: xianyangwong/skill-gomoku:latest
-    # build: .  # 如果想在本地构建，请取消注释此行
+    build: .  # 如果想在本地构建，请取消注释此行
     container_name: skill-gomoku-container
     ports:
       - "3000:3000"
     environment:
       - PORT=3000
+      - REDIS_URL=redis://redis:6379
     restart: always
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:alpine
+    container_name: skill-gomoku-redis
+    ports:
+      - "6379:6379"
+    restart: always
+

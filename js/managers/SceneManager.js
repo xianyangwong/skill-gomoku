@@ -29,8 +29,8 @@ export class SceneManager {
     init(containerId) {
         // 1. Scene
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x333333);
-        this.scene.fog = new THREE.Fog(0x333333, 20, 100);
+        this.scene.background = new THREE.Color(0x2a2a2a); // Slightly darker, warmer grey
+        this.scene.fog = new THREE.Fog(0x2a2a2a, 20, 100);
 
         // 2. Camera
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -47,6 +47,8 @@ export class SceneManager {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+        // this.renderer.outputEncoding = THREE.sRGBEncoding; // If using older Three.js
         document.getElementById(containerId).appendChild(this.renderer.domElement);
 
         // 4. Controls
@@ -58,14 +60,22 @@ export class SceneManager {
         this.controls.update();
 
         // 5. Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         this.scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(10, 20, 10);
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+        hemiLight.position.set(0, 20, 0);
+        this.scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(10, 30, 10);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 500;
+        dirLight.shadow.bias = -0.001;
+        dirLight.shadow.radius = 4; // Soften shadow edges
         this.scene.add(dirLight);
 
         // 6. Objects
@@ -82,10 +92,14 @@ export class SceneManager {
     createBoard() {
         // Board Base
         const geometry = new THREE.BoxGeometry(BOARD_WIDTH + 1.5, 1.5, BOARD_WIDTH + 1.5);
-        const material = new THREE.MeshStandardMaterial({ 
+        // Improved Wood Material
+        const material = new THREE.MeshPhysicalMaterial({ 
             color: 0xE6C288, 
-            roughness: 0.3,
-            metalness: 0.05
+            roughness: 0.4,
+            metalness: 0.1,
+            clearcoat: 0.3,
+            clearcoatRoughness: 0.2,
+            reflectivity: 0.5
         });
         this.boardMesh = new THREE.Mesh(geometry, material);
         this.boardMesh.position.y = -0.75;
@@ -93,7 +107,7 @@ export class SceneManager {
         this.scene.add(this.boardMesh);
 
         // Grid Lines
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.5, transparent: true });
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.4, transparent: true });
         const points = [];
         const halfSize = BOARD_WIDTH / 2;
         const start = -halfSize + CELL_SIZE / 2;
@@ -144,17 +158,32 @@ export class SceneManager {
 
     createPiece(x, y, player) {
         const isBlack = player === PLAYER_BLACK;
-        const color = isBlack ? 0x111111 : 0xffffff;
         
         const geometry = new THREE.SphereGeometry(PIECE_RADIUS, 32, 16);
         geometry.scale(1, 0.4, 1);
 
-        const material = new THREE.MeshStandardMaterial({ 
-            color: color, 
-            roughness: isBlack ? 0.2 : 0.1,
-            metalness: 0.1,
-            envMapIntensity: 1.0
-        });
+        let material;
+        if (isBlack) {
+            // Matte Stone (Black)
+            material = new THREE.MeshPhysicalMaterial({ 
+                color: 0x111111, 
+                roughness: 0.7,
+                metalness: 0.1,
+                clearcoat: 0.1,
+                clearcoatRoughness: 0.5
+            });
+        } else {
+            // Jade/Marble (White)
+            material = new THREE.MeshPhysicalMaterial({ 
+                color: 0xffffff, 
+                roughness: 0.1,
+                metalness: 0.1,
+                transmission: 0.1, // Slight translucency
+                thickness: 0.5,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1
+            });
+        }
         
         const piece = new THREE.Mesh(geometry, material);
         const worldPos = this.gridToWorld(x, y);
@@ -166,6 +195,10 @@ export class SceneManager {
         
         this.scene.add(piece);
         this.pieceMeshes.push(piece);
+        
+        // Add placement effect
+        this.createPlacementEffect(piece.position);
+
         return piece;
     }
 
@@ -390,5 +423,31 @@ export class SceneManager {
         } else {
             this.renderer.render(this.scene, this.camera);
         }
+    }
+
+    createPlacementEffect(position) {
+        const geometry = new THREE.RingGeometry(PIECE_RADIUS * 0.8, PIECE_RADIUS * 1.2, 32);
+        const material = new THREE.MeshBasicMaterial({ 
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 0.8,
+            side: THREE.DoubleSide 
+        });
+        const ring = new THREE.Mesh(geometry, material);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.copy(position);
+        ring.position.y = 0.05; // Just above board
+        this.scene.add(ring);
+
+        const animateRing = () => {
+            ring.scale.multiplyScalar(1.05);
+            ring.material.opacity -= 0.05;
+            if (ring.material.opacity <= 0) {
+                this.scene.remove(ring);
+            } else {
+                requestAnimationFrame(animateRing);
+            }
+        };
+        animateRing();
     }
 }

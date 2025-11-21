@@ -305,4 +305,26 @@ export class GameLogic {
     isHidden(x, y) {
         return this.hiddenPieces.some(p => p.x === x && p.y === y);
     }
+
+    toJSON() {
+        return {
+            board: this.board,
+            currentPlayer: this.currentPlayer,
+            gameOver: this.gameOver,
+            winner: this.winner,
+            skillCooldowns: this.skillCooldowns,
+            playerSkills: this.playerSkills,
+            hiddenPieces: this.hiddenPieces
+        };
+    }
+
+    fromJSON(data) {
+        this.board = data.board;
+        this.currentPlayer = data.currentPlayer;
+        this.gameOver = data.gameOver;
+        this.winner = data.winner;
+        this.skillCooldowns = data.skillCooldowns;
+        this.playerSkills = data.playerSkills;
+        this.hiddenPieces = data.hiddenPieces;
+    }
 }

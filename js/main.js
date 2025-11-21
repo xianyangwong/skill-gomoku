@@ -28,6 +28,8 @@ const SHAKE_DECAY = 0.9;
 let socket;
 let myRole = null; // PLAYER_BLACK or PLAYER_WHITE
 let roomId = null;
+let myPlayerId = null;
+let isGameActive = false;
 
 // UI Elements
 const uiPlayerName = document.getElementById('current-player');
@@ -285,6 +287,32 @@ function init() {
         lobbyStatus.style.color = "#ff4444";
     }
 
+    // Initialize Player ID
+    // Use sessionStorage so that different tabs have different IDs (allowing self-play testing),
+    // but refreshing the page preserves the ID (allowing reconnection).
+    myPlayerId = sessionStorage.getItem('skillGomoku_playerId');
+    if (!myPlayerId) {
+        myPlayerId = 'player_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        sessionStorage.setItem('skillGomoku_playerId', myPlayerId);
+    }
+    console.log("My Player ID:", myPlayerId);
+    
+    // Show Player ID in Lobby for debugging
+    const debugId = document.createElement('div');
+    debugId.style.position = 'absolute';
+    debugId.style.bottom = '10px';
+    debugId.style.right = '10px';
+    debugId.style.color = '#444';
+    debugId.style.fontSize = '10px';
+    debugId.textContent = 'ID: ' + myPlayerId;
+    document.querySelector('.lobby-box').appendChild(debugId);
+
+    // Auto-fill Room ID if present
+    const savedRoomId = sessionStorage.getItem('skillGomoku_roomId');
+    if (savedRoomId) {
+        roomIdInput.value = savedRoomId;
+    }
+
     // Initialize Language
     changeLanguage(currentLang);
 
@@ -513,6 +541,7 @@ function setupSocketListeners() {
     });
 
     socket.on('game_start', (data) => {
+        isGameActive = true;
         game.board = data.board;
         game.currentPlayer = data.currentPlayer;
         game.hiddenPieces = data.hiddenPieces || [];
@@ -524,6 +553,39 @@ function setupSocketListeners() {
         // Show draft animation for my skills
         if (myRole && game.playerSkills[myRole]) {
             showSkillDraftAnimation(game.playerSkills[myRole]);
+        }
+    });
+
+    socket.on('game_sync', (data) => {
+        // Full state sync (for reconnection)
+        isGameActive = true;
+        game.board = data.board;
+        game.currentPlayer = data.currentPlayer;
+        game.hiddenPieces = data.hiddenPieces || [];
+        game.playerSkills = data.playerSkills || {};
+        game.gameOver = !!data.winner;
+        game.winner = data.winner;
+        
+        // Rebuild board visuals
+        pieceMeshes.forEach(mesh => scene.remove(mesh));
+        pieceMeshes = [];
+        
+        for(let y=0; y<BOARD_SIZE; y++) {
+            for(let x=0; x<BOARD_SIZE; x++) {
+                if (game.board[y][x] !== EMPTY) {
+                    createPiece(x, y, game.board[y][x]);
+                }
+            }
+        }
+
+        updateUI();
+        updatePieceVisibility();
+        checkGameState();
+        
+        if (game.gameOver) {
+             uiMessage.textContent = game.winner === PLAYER_BLACK ? t('victoryBlack') : t('victoryWhite');
+        } else {
+             uiMessage.textContent = "";
         }
     });
 
@@ -622,6 +684,7 @@ function setupSocketListeners() {
     });
 
     socket.on('game_restart', (data) => {
+        isGameActive = true;
         game.initBoard();
         game.gameOver = false;
         game.winner = null;
@@ -650,6 +713,7 @@ function setupSocketListeners() {
     
     socket.on('player_left', () => {
         uiMessage.textContent = t('opponentLeft');
+        isGameActive = false;
         game.gameOver = true; // Pause game effectively
     });
 
@@ -684,9 +748,10 @@ function addChatMessage(msg, isSelf) {
 function joinRoom() {
     const id = roomIdInput.value.trim();
     if (id) {
+        sessionStorage.setItem('skillGomoku_roomId', id); // Save for reconnection
         lobbyStatus.textContent = t('connecting');
         if (socket) {
-            socket.emit('join_room', id);
+            socket.emit('join_room', { roomId: id, playerId: myPlayerId });
             // Try to start music on user interaction
             bgm.volume = 0.02;
             bgm.play().catch(e => console.log("Auto-play blocked:", e));
@@ -814,8 +879,8 @@ function worldToGrid(x, z) {
 
 // --- Interaction ---
 function onMouseMove(event) {
-    // Only show preview if it's my turn
-    if (game.currentPlayer !== myRole) {
+    // Only show preview if it's my turn and game is active
+    if (!isGameActive || game.currentPlayer !== myRole) {
         previewMesh.visible = false;
         return;
     }
@@ -907,6 +972,7 @@ function onMouseClick(event) {
     
     if (mouseDownPosition.distanceTo(currentPos) > threshold) return;
 
+    if (!isGameActive) return;
     if (game.gameOver) return;
     if (game.currentPlayer !== myRole) return; // Not my turn
 
